@@ -1,5 +1,6 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using DokanNet;
 using Layers3.Helpers;
 using System.Collections.Concurrent;
@@ -7,7 +8,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.AccessControl;
 using System.Text.RegularExpressions;
-using Amazon.S3.Transfer;
 using FileAccess = DokanNet.FileAccess;
 using Timer = System.Timers.Timer;
 
@@ -17,39 +17,63 @@ namespace Layers3.Models
     {
         private readonly IAmazonS3 _s3Client;
         private readonly string _bucketName;
-        private readonly string _driveLetter;
-        private ConcurrentDictionary<string, S3FileWriteContext> _writeContextDic = new();
 
         public S3FileSystem(IAmazonS3 s3Client, string bucketName, string driveLetter)
         {
             _s3Client = s3Client;
             _bucketName = bucketName;
-            _driveLetter = driveLetter;
         }
 
         public NtStatus CreateFile(string fileName, FileAccess access, FileShare share, FileMode mode, FileOptions options,
             FileAttributes attributes, IDokanFileInfo info)
         {
-            if (fileName.TrimStart(Path.DirectorySeparatorChar).Length == 0)
+            if (fileName == "\\desktop.ini" || fileName.EndsWith("\\desktop.ini") || fileName.TrimStart(Path.DirectorySeparatorChar).Length == 0)
             {
                 return DokanResult.Success;
             }
 
-            if (info.IsDirectory)
+            var isFolderRegex = new Regex(@"新しいフォルダー(\s\(\d+?\))/?$");
+
+            var isDirectory = isFolderRegex.IsMatch(fileName);
+
+            if (isDirectory)
             {
-                if (mode == FileMode.CreateNew)
+                if (mode == FileMode.Open)
                 {
                     // ディレクトリ作成処理を実装
                     var request = new PutObjectRequest
                     {
                         BucketName = _bucketName,
-                        Key = fileName.TrimStart(Path.DirectorySeparatorChar) + "/"
+                        Key = fileName.Substring(1).Replace('\\', '/').TrimStart(Path.DirectorySeparatorChar) + "/"
                     };
                     _s3Client.PutObjectAsync(request).Wait();
+                    Debug.WriteLine($"PUT Dir: {request.Key}");
                 }
                 return DokanResult.Success;
             }
+            else
+            {
+               //do nothing
+            }
             return DokanResult.Success;
+        }
+
+        private bool ExistsOnS3(string key)
+        {
+            var request = new GetObjectRequest()
+            {
+                BucketName = _bucketName,
+                Key = key,
+            };
+            try
+            {
+                var response = _s3Client.GetObjectAsync(request).GetAwaiter().GetResult();
+                return response.HttpStatusCode == System.Net.HttpStatusCode.OK;
+            }
+            catch (Amazon.S3.AmazonS3Exception e)
+            {
+                return false;
+            }
         }
 
         public void Cleanup(string fileName, IDokanFileInfo info)
@@ -59,13 +83,12 @@ namespace Layers3.Models
                 return;
             if (info.DeleteOnClose)
             {
-                _s3Client.DeleteObjectAsync(_bucketName, key).Wait();
+                _s3Client.DeleteObjectAsync(_bucketName, key + (info.IsDirectory ? "/" : string.Empty)).Wait();
             }
         }
 
         public void CloseFile(string fileName, IDokanFileInfo info)
         {
-            //Debug.WriteLine("CloseFile");
         }
 
         //S3のバケットのファイルを読み込む
@@ -86,10 +109,7 @@ namespace Layers3.Models
                 bytesRead = 0;
                 return DokanResult.FileNotFound;
             }
-
-            const int MinPartSize = 5 * 1024 * 1024; // 5MB
-
-
+            
             var transferUtility = new TransferUtility(_s3Client);
             var request = new TransferUtilityOpenStreamRequest()
             {
@@ -97,11 +117,19 @@ namespace Layers3.Models
                 Key = key,
             };
 
-            using var stream = transferUtility.OpenStream(request);
-            using var ms = new MemoryStream();
-            stream.CopyTo(ms);
-            ms.Position = offset;
-            bytesRead = ms.Read(buffer, 0, buffer.Length);
+            try
+            {
+                using var stream = transferUtility.OpenStream(request);
+                using var ms = new MemoryStream();
+                stream.CopyTo(ms);
+                ms.Position = offset;
+                bytesRead = ms.Read(buffer, 0, buffer.Length);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                bytesRead = 0;
+            }
 
             return DokanResult.Success;
         }
@@ -139,11 +167,7 @@ namespace Layers3.Models
                         // 最後の呼び出しから設定時間が経過した場合の処理
                         Debug.WriteLine("Special processing after the last call.");
                         lazyrun(key);
-                        var timer = (Timer)sender; 
-                        //timer.AutoReset = false;
-                        //timer.Enabled = false;
-                        //timer.Stop();
-                        //TimerIsRunning = false;
+                        var timer = (Timer)sender;
                         timer.Dispose();
                     }
                 };
@@ -161,7 +185,6 @@ namespace Layers3.Models
                     Debug.WriteLine($"GetBuffer");
                     var buffers = Buffers.OrderBy(x => x.Offset).ToList();
                     var seqNum = 0;
-                    //buffers.ForEach(x => x.SequenceNumber = seqNum++);
                     var buffer = new MemoryStream();
                     buffer.Position = 0;
                     DumpToFile(buffers[0].Stream);
@@ -239,192 +262,6 @@ namespace Layers3.Models
             }
 
             End(key);
-
-            #region obsolete
-            //signalManager.HandlePart(key);
-
-
-            //if (offset == 0)
-            //{
-            //    Debug.WriteLine($"New file upload:{key}");
-
-            //    //if (buffer.Length < MinPartSize)
-            //    //{
-            //    //    // ファイルサイズが最小パートサイズ未満の場合は、通常のアップロードを行う
-            //    //    using (var stream = new MemoryStream(buffer))
-            //    //    {
-            //    //        var putRequest = new PutObjectRequest
-            //    //        {
-            //    //            BucketName = _bucketName,
-            //    //            Key = key,
-            //    //            InputStream = stream
-            //    //        };
-            //    //        _s3Client.PutObjectAsync(putRequest).Wait();
-            //    //        bytesWritten = buffer.Length;
-            //    //    }
-            //    //    return DokanResult.Success;
-            //    //}
-
-            //    // 新しいマルチパートアップロードを開始する
-            //    var initiateRequest = new InitiateMultipartUploadRequest
-            //    {
-            //        BucketName = _bucketName,
-            //        Key = key
-            //    };
-            //    var initResponse = _s3Client.InitiateMultipartUploadAsync(initiateRequest).Result;
-
-            //    // アップロードIDと現在のオフセットを格納する
-            //    _writeContextDic.TryAdd(key, new S3FileWriteContext()
-            //    {
-            //        UploadId = initResponse.UploadId,
-            //        CurrentOffset = 0,
-            //        FileSize = 0
-            //    });
-
-            //    //_signals.TryAdd(key, true);
-            //}
-
-            ////while (!_writeContextDic.ContainsKey(key))
-            ////{
-            ////    // マルチパートアップロードの開始が完了するまで待機
-            ////    System.Threading.Thread.Sleep(10);
-            ////}
-
-            //_writeContextDic.TryGetValue(key, out var context);
-            //if (context is null)
-            //{
-            //    bytesWritten = 0;
-            //    return DokanResult.Success;
-            //}
-            ////using (var stream = new MemoryStream(buffer))
-            ////{
-            //    lock (context)
-            //    {
-            //        bytesWritten = buffer.Length;
-            //    //Debug.WriteLine($"Upload part:{key}, offset:{offset}, length:{stream.Length}");
-
-            //    signalManager.PushAndClearBuffer(key, _bucketName, context, _s3Client);
-
-            //    //var partNumber = context.PartETags.Any() ? context.PartETags.Max(x => x.PartNumber) + 1 : 1;
-
-
-            //    //// 現在のオフセットとファイルサイズを更新する
-            //    //context.CurrentOffset += buffer.Length;
-            //    //context.FileSize = Math.Max(context.FileSize, context.CurrentOffset);
-
-            //    var flag = signalManager.FinishPart(key, buffer, _bucketName, _s3Client, length =>
-            //        {
-
-            //            if (length < MinPartSize)
-            //            {
-            //                // ファイルサイズが最小パートサイズ未満の場合は、通常のアップロードを行う
-            //                //using (var stream = new MemoryStream(buffer))
-            //                //{
-            //                var signal = signalManager[key];
-
-
-            //                    var putRequest = new PutObjectRequest
-            //                    {
-            //                        BucketName = _bucketName,
-            //                        Key = key,
-            //                        InputStream = signal.GetBuffer()
-            //                    };
-            //                    _s3Client.PutObjectAsync(putRequest).Wait();
-            //                //}
-            //                Debug.WriteLine($"Complete singlepart upload:{key}");
-            //            }
-            //            else
-            //            {
-            //                var partETags = context.PartETags.ToList();
-            //                lock (context)
-            //                {
-            //                    partETags = context.PartETags.ToList();
-            //                }
-
-            //                // マルチパートアップロードを完了する
-            //                var completeRequest = new CompleteMultipartUploadRequest
-            //                {
-            //                    BucketName = _bucketName,
-            //                    Key = key,
-            //                    UploadId = context.UploadId,
-            //                    PartETags = partETags
-            //                };
-            //                var result = _s3Client.CompleteMultipartUploadAsync(completeRequest).Result;
-            //                Debug.WriteLine($"Complete multipart upload:{key}");
-            //            }
-
-            //            _writeContextDic.TryRemove(key, out _);
-            //        });
-
-            //        if (flag)
-            //        {
-            //            using (var stream = new MemoryStream(buffer))
-            //            {
-            //                // ファイルサイズが最小パートサイズ未満の場合は、通常のアップロードを行う
-            //                var putRequest = new PutObjectRequest
-            //                {
-            //                    BucketName = _bucketName,
-            //                    Key = key,
-            //                    InputStream = stream
-            //                };
-            //                _s3Client.PutObjectAsync(putRequest).Wait();
-            //                bytesWritten = buffer.Length;
-            //            }
-            //        }
-            //    }
-
-            ////_writeContextDic.TryGetValue(key, out context);
-            ////if (context is null)
-            ////{
-            ////    return DokanResult.Success;
-            ////}
-            ////if (context.CurrentOffset == context.FileSize)
-            ////{
-
-            ////var isLastCallCompleted = _isLastCallCompletedDic[key];
-
-            ////// 最後の呼び出しが完了したかどうかを確認
-            ////if (!isLastCallCompleted)
-            ////{
-            ////    lock (lockObject)
-            ////    {
-            ////        if (!isLastCallCompleted)
-            ////        {
-            ////            // 特別な処理を実行
-            ////            //Console.WriteLine("Last call - Performing special operation.");
-            ////            //isLastCallCompleted = true;
-            ////            _isLastCallCompletedDic.TryRemove(key, out isLastCallCompleted);
-
-
-
-            ////            //// 特別な処理が完了したことを通知
-            ////            //waitHandle.Set();
-            ////        }
-            ////    }
-            ////}
-
-            ////var action = new Action(() =>
-            ////{
-            ////    Debug.WriteLine($"Complete multipart upload:{key}");
-            ////    var partETags = context.PartETags.ToList();
-            ////    lock (context)
-            ////    {
-            ////        partETags = context.PartETags.ToList();
-            ////    }
-
-            ////    // マルチパートアップロードを完了する
-            ////    var completeRequest = new CompleteMultipartUploadRequest
-            ////    {
-            ////        BucketName = _bucketName,
-            ////        Key = key,
-            ////        UploadId = context.UploadId,
-            ////        PartETags = partETags
-            ////    };
-            ////    _s3Client.CompleteMultipartUploadAsync(completeRequest).Wait();
-            ////    _writeContextDic.TryRemove(key, out _);
-            ////});
-            ////}
-            #endregion obsolete
 
             bytesWritten = buffer.Length;
 
@@ -510,59 +347,12 @@ namespace Layers3.Models
                 a.LastCallTime = DateTime.Now;
                 a.Timer.Stop();
                 a.Timer.Start();
-                
-                
-                //lock (a.LockObject)
-                //{
-                //    a.EndDateTime = DateTime.Now;
-                //}
-
-                //Task.Run(() =>
-                //{
-                //    lock (a.LockObject)
-                //    {
-                //        if (a.EndDateTime + Interval > DateTime.Now)
-                //        {
-                //            return;
-                //        }
-                //    }
-
-                //    Debug.WriteLine($"{a.EndDateTime + Interval}, {DateTime.Now}");
-                //    if (a.EndDateTime + Interval < DateTime.Now)
-                //    {
-                //        LazyRun(key);
-                //        dictionary.TryRemove(dictionary.Single(x => x.Key == key));
-                //    }
-                //});
             }
         }
 
         public NtStatus FlushFileBuffers(string fileName, IDokanFileInfo info)
         {
             Debug.WriteLine("FlushFileBuffers");
-            ////// S3には適用されない
-            ////return DokanResult.Success;
-            //var key = fileName.TrimStart(Path.DirectorySeparatorChar);
-            //key = key.Replace('\\', '/');
-
-            //_writeContextDic.TryGetValue(key, out var context);
-            //Debug.WriteLine($"Complete multipart upload:{key}");
-            //var partETags = context.PartETags.ToList();
-            //lock (context)
-            //{
-            //    partETags = context.PartETags.ToList();
-            //}
-            //// マルチパートアップロードを完了する
-            //var completeRequest = new CompleteMultipartUploadRequest
-            //{
-            //    BucketName = _bucketName,
-            //    Key = key,
-            //    UploadId = context.UploadId,
-            //    PartETags = partETags
-            //};
-            //_s3Client.CompleteMultipartUploadAsync(completeRequest).Wait();
-            //_writeContextDic.TryRemove(key, out _);
-
             return DokanResult.Success;
         }
 
@@ -603,8 +393,6 @@ namespace Layers3.Models
                 request.Prefix = string.Empty;
             }
             var response = _s3Client.ListObjectsV2Async(request).Result;
-
-            //response.S3Objects.ToList().ForEach(x => x.Key = x.Key.Remove(x.Key.IndexOf(request.Prefix), request.Prefix.Length));
 
             if (key.Length > 0 && (response.S3Objects.Any(o => o.Key == key.Substring(1) + "/") || response.S3Objects.Any(o => o.Key.StartsWith(key.Substring(1) + "/"))))
             {
@@ -665,42 +453,51 @@ namespace Layers3.Models
 
             var regex = new Regex(@"^(/[^/]+)+/");
             var regex2 = new Regex(@"^/([^/]+)");
-
+            
             if (prefix.Length > 0)
             {
                 result.S3Objects.ToList()
                     .ForEach(x => x.Key = x.Key.IndexOf($"{prefix}/") != -1 ? x.Key.Remove(x.Key.IndexOf($"{prefix}/"), $"{prefix}/".Length) : x.Key);
             }
 
+            var list = new List<FileInformation>();
 
-            var dirs = result.S3Objects
-                .Select(x =>
+            foreach (var s3Object in result.S3Objects)
+            {
+                var key = s3Object.Key;
+                if (string.IsNullOrEmpty(key) ||
+                    key.EndsWith("desktop.ini") ||
+                    key.EndsWith("desktop.ini/") ||
+                    key.EndsWith("folder.jpg") ||
+                    key.EndsWith("folder.jpg/"))
                 {
-                    x.Key = "/" + x.Key;
-                    return x;
-                })
-                .Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.Key, ConvertToRegex(searchPattern)))
-                .GroupBy(x => regex.Match(x.Key).Value)
-                .Select(group => regex2.Match(group.Key).Value)
-                .Distinct()
-                .Where(x => x.Length > 0)
-                .Select(x => new FileInformation()
-                {
-                    Attributes = FileAttributes.Directory,
-                    FileName = x.Substring(1)
-                }).ToArray();
+                    continue;
+                }
 
-            files = result.S3Objects
-                .Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.Key, ConvertToRegex(searchPattern)))
-                .Where(x => !x.Key.Substring(1).Contains("/"))
-                .Select(x => new FileInformation()
+                if (key.EndsWith("/") && !key.Contains("\\"))
                 {
-                    Attributes = FileAttributes.Normal,
-                    FileName = x.Key.Substring(1),
-                    Length = x.Size
-                })
-                .Union(dirs)
-                .ToArray();
+                    list.Add(new FileInformation()
+                    {
+                        Attributes = FileAttributes.Directory,
+                        FileName = key.Substring(0, key.Length - 1)
+                    });
+                }
+                else if (key.Contains("/"))
+                {
+                    continue;
+                }
+                else
+                {
+                    list.Add(new FileInformation()
+                    {
+                        Attributes = FileAttributes.Normal,
+                        FileName = key,
+                        Length = s3Object.Size
+                    });
+                }
+            }
+
+            files = list;
 
             return DokanResult.Success;
         }
@@ -765,52 +562,134 @@ namespace Layers3.Models
             var sourceKey = oldName.TrimStart(Path.DirectorySeparatorChar).Replace('\\', '/');
             var destinationKey = newName.TrimStart(Path.DirectorySeparatorChar).Replace('\\', '/');
 
-            // 移動元のファイルを取得
-            var sourceRequest = new GetObjectRequest
+            try
             {
-                BucketName = _bucketName,
-                Key = sourceKey
-            };
-            var sourceResponse = _s3Client.GetObjectAsync(sourceRequest).Result;
-
-            // 移動先のファイルにコピーする
-            var copyRequest = new CopyObjectRequest
-            {
-                SourceBucket = _bucketName,
-                SourceKey = sourceKey,
-                DestinationBucket = _bucketName,
-                DestinationKey = destinationKey
-            };
-            _s3Client.CopyObjectAsync(copyRequest).Wait();
-
-            // 移動元のファイルを削除する
-            _s3Client.DeleteObjectAsync(_bucketName, sourceKey).Wait();
-
-            // 移動元がディレクトリの場合、移動先のディレクトリ内のファイルのキーを変更する
-            if (IsDirectory(oldName))
-            {
-                var prefix = sourceKey + "/";
-                var request = new ListObjectsV2Request
+                // 移動元のファイルを取得
+                var sourceRequest = new GetObjectRequest
                 {
                     BucketName = _bucketName,
-                    Prefix = prefix
+                    Key = sourceKey
                 };
-                var response = _s3Client.ListObjectsV2Async(request).Result;
+                var sourceResponse = _s3Client.GetObjectAsync(sourceRequest).Result;
 
-                foreach (var s3Object in response.S3Objects)
+                // 移動先のファイルにコピーする
+                var copyRequest = new CopyObjectRequest
                 {
-                    var newKey = destinationKey + s3Object.Key.Substring(prefix.Length);
-                    var copyObjectRequest = new CopyObjectRequest
+                    SourceBucket = _bucketName,
+                    SourceKey = sourceKey,
+                    DestinationBucket = _bucketName,
+                    DestinationKey = destinationKey
+                };
+                _s3Client.CopyObjectAsync(copyRequest).Wait();
+
+                // 移動元のファイルを削除する
+                _s3Client.DeleteObjectAsync(_bucketName, sourceKey).Wait();
+
+                // 移動元がディレクトリの場合、移動先のディレクトリ内のファイルのキーを変更する
+                if (IsDirectory(oldName))
+                {
+                    var prefix = sourceKey + "/";
+                    var request = new ListObjectsV2Request
                     {
-                        SourceBucket = _bucketName,
-                        SourceKey = s3Object.Key,
-                        DestinationBucket = _bucketName,
-                        DestinationKey = newKey
+                        BucketName = _bucketName,
+                        Prefix = prefix
                     };
-                    _s3Client.CopyObjectAsync(copyObjectRequest).Wait();
-                    _s3Client.DeleteObjectAsync(_bucketName, s3Object.Key).Wait();
+                    var response = _s3Client.ListObjectsV2Async(request).Result;
+
+                    foreach (var s3Object in response.S3Objects)
+                    {
+                        var newKey = destinationKey + s3Object.Key.Substring(prefix.Length);
+                        var copyObjectRequest = new CopyObjectRequest
+                        {
+                            SourceBucket = _bucketName,
+                            SourceKey = s3Object.Key,
+                            DestinationBucket = _bucketName,
+                            DestinationKey = newKey
+                        };
+                        _s3Client.CopyObjectAsync(copyObjectRequest).Wait();
+                        _s3Client.DeleteObjectAsync(_bucketName, s3Object.Key).Wait();
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                //ファイルではなくディレクトリの場合
+                var sourceRequest = new GetObjectRequest
+                {
+                    BucketName = _bucketName,
+                    Key = sourceKey + "/"
+                };
+                var sourceResponse = _s3Client.GetObjectAsync(sourceRequest).Result;
+
+                // 移動先のフォルダにコピーする
+                var copyRequest = new CopyObjectRequest
+                {
+                    SourceBucket = _bucketName,
+                    SourceKey = sourceKey + "/",
+                    DestinationBucket = _bucketName,
+                    DestinationKey = destinationKey + "/",
+                };
+                _s3Client.CopyObjectAsync(copyRequest).Wait();
+
+                {
+                    var prefix = sourceKey + "/";
+                    var request = new ListObjectsV2Request
+                    {
+                        BucketName = _bucketName,
+                        Prefix = prefix
+                    };
+                    var response = _s3Client.ListObjectsV2Async(request).Result;
+
+                    foreach (var s3Object in response.S3Objects.Where(x => Path.GetFileName(x.Key).Any()))
+                    {
+                        var newKey = destinationKey + "/" + s3Object.Key.Substring(prefix.Length);
+                        var copyObjectRequest = new CopyObjectRequest
+                        {
+                            SourceBucket = _bucketName,
+                            SourceKey = s3Object.Key,
+                            DestinationBucket = _bucketName,
+                            DestinationKey = newKey
+                        };
+                        _s3Client.CopyObjectAsync(copyObjectRequest).Wait();
+                    }
+                }
+
+                try
+                {
+                    var prefix = sourceKey + "/";
+                    var request = new ListObjectsV2Request
+                    {
+                        BucketName = _bucketName,
+                        Prefix = prefix
+                    };
+                    var response = _s3Client.ListObjectsV2Async(request).Result;
+
+                    foreach (var s3Object in response.S3Objects)
+                    {
+                        _s3Client.DeleteObjectAsync(_bucketName, s3Object.Key).Wait();
+                    }
+
+                    // 移動元のファイルを削除する
+                    _s3Client.DeleteObjectAsync(_bucketName, sourceKey + "/").Wait();
+                }
+                catch (Exception exception)
+                {
+                }
+
+                Task.Factory.StartNew(async () =>
+                {
+                    await Task.Delay(5000);
+                    try
+                    {
+                        //ゴミファイルを削除
+                        _s3Client.DeleteObjectAsync(_bucketName, destinationKey).Wait();
+                    }
+                    catch (Exception exception)
+                    {
+                    }
+                });
+            }
+            
 
             return DokanResult.Success;
         }
