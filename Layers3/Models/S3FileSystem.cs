@@ -316,7 +316,6 @@ namespace Layers3.Models
                             }
                         }
                     });
-                    DumpToFile(dictionary[key].Buffers.First().Stream);
                 }
             }
 
@@ -548,84 +547,22 @@ namespace Layers3.Models
                     var allLength = a.Buffers.Sum(x => x.Stream.Length);
                     var unitLength = 6 * 1024 * 1024;
 
-                    if (allLength < unitLength)
+                    using var stream = a.GetBuffer();
+                    stream.Position = 0;
+                    TransferUtilityUploadRequest request = new TransferUtilityUploadRequest
                     {
-                        using var stream = a.GetBuffer();
-                        stream.Position = 0;
-                        TransferUtilityUploadRequest request = new TransferUtilityUploadRequest
-                        {
-                            BucketName = _bucketName,
-                            Key = key,
-                            InputStream = stream,
-                            CannedACL = S3CannedACL.Private,
-                        };
+                        BucketName = _bucketName,
+                        Key = key,
+                        InputStream = stream,
+                        CannedACL = S3CannedACL.Private,
+                    };
 
-                        var transferUtility = new TransferUtility(_s3Client);
-                        transferUtility.Upload(request);
-                        var entry = dictionary.SingleOrDefault(x => x.Key == key);
-                        if (entry.Value is not null)
-                        {
-                            dictionary.TryRemove(entry);
-                        }
-                    }
-                    else
+                    var transferUtility = new TransferUtility(_s3Client);
+                    transferUtility.Upload(request);
+                    var entry = dictionary.SingleOrDefault(x => x.Key == key);
+                    if (entry.Value is not null)
                     {
-
-                        var initiateRequest = new InitiateMultipartUploadRequest
-                        {
-                            BucketName = _bucketName,
-                            Key = key
-                        };
-                        var initResponse = _s3Client.InitiateMultipartUploadAsync(initiateRequest).Result;
-
-                        var partSize = unitLength;
-                        var tasks = new List<Task<UploadPartResponse>>();
-                        var remainingBytes = allLength;
-                        var currentOffset = 0L;
-
-                        var seqNum = 1;
-
-
-                        while (remainingBytes > 0)
-                        {
-                            using var stream = a.Pop().Stream;
-                            stream.Position = 0;
-                            var readSize = Math.Min(partSize, remainingBytes);
-                            var partBuffer = new byte[readSize];
-                            stream.Read(partBuffer, 0, partBuffer.Length);
-
-                            var partRequest = new UploadPartRequest
-                            {
-                                BucketName = _bucketName,
-                                Key = key,
-                                UploadId = initResponse.UploadId,
-                                PartNumber = seqNum++,
-                                PartSize = readSize,
-                                InputStream = new MemoryStream(partBuffer)
-                            };
-
-                            tasks.Add(_s3Client.UploadPartAsync(partRequest));
-
-                            remainingBytes -= readSize;
-                            currentOffset += readSize;
-                        }
-
-                        Task.WaitAll(tasks.ToArray());
-
-                        var partETags = tasks.Select(x => new PartETag
-                        {
-                            PartNumber = x.Result.PartNumber,
-                            ETag = x.Result.ETag
-                        }).OrderBy(x => x.PartNumber).ToList();
-
-                        var completeRequest = new CompleteMultipartUploadRequest
-                        {
-                            BucketName = _bucketName,
-                            Key = key,
-                            UploadId = initResponse.UploadId,
-                            PartETags = partETags
-                        };
-                        _s3Client.CompleteMultipartUploadAsync(completeRequest).Wait();
+                        dictionary.TryRemove(entry);
                     }
                 }
 
