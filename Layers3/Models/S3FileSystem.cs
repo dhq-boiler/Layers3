@@ -68,15 +68,16 @@ namespace Layers3.Models
             //Debug.WriteLine("CloseFile");
         }
 
+        //S3のバケットのファイルを読み込む
         public NtStatus ReadFile(string fileName, byte[] buffer, out int bytesRead, long offset, IDokanFileInfo info)
         {
+            Debug.WriteLine($"ReadFile filename:{fileName}, offset:{offset}");
 
             while (dictionary.Any(x => x.Value.TimerIsRunning))
             {
                 Task.Delay(1000).Wait();
             }
 
-            Debug.WriteLine("ReadFile");
             var key = fileName.TrimStart(Path.DirectorySeparatorChar);
             key = key.Replace('\\', '/');
 
@@ -88,67 +89,21 @@ namespace Layers3.Models
 
             const int MinPartSize = 5 * 1024 * 1024; // 5MB
 
-            var request = new GetObjectRequest
+
+            var transferUtility = new TransferUtility(_s3Client);
+            var request = new TransferUtilityOpenStreamRequest()
             {
                 BucketName = _bucketName,
                 Key = key,
-                ByteRange = new ByteRange(offset, offset + buffer.Length - 1)
             };
 
-            //if (buffer.Length < MinPartSize)
-            //{
-            //    using (var response = _s3Client.GetObjectAsync(request).Result)
-            //    using (var stream = response.ResponseStream)
-            //    {
-            //        bytesRead = stream.Read(buffer, 0, buffer.Length);
-            //    }
-            //    return DokanResult.Success;
-            //}
-            //else
-            //{
-                var partSize = MinPartSize;
-                var tasks = new List<Task<int>>();
-                var remainingBytes = buffer.Length;
-                var currentOffset = offset;
+            using var stream = transferUtility.OpenStream(request);
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            ms.Position = offset;
+            bytesRead = ms.Read(buffer, 0, buffer.Length);
 
-                byte[] partBuffer = new byte[5 * 1024 * 1024];
-
-                while (remainingBytes > 0)
-                {
-                    var readSize = Math.Min(partSize, remainingBytes);
-                    partBuffer = new byte[readSize];
-                    var partRequest = new GetObjectRequest
-                    {
-                        BucketName = _bucketName,
-                        Key = key,
-                        ByteRange = new ByteRange(currentOffset, currentOffset + readSize - 1)
-                    };
-
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        using (var response = await _s3Client.GetObjectAsync(partRequest))
-                        using (var stream = response.ResponseStream)
-                        {
-                            return await stream.ReadAsync(partBuffer, 0, partBuffer.Length);
-                        }
-                    }));
-
-                    remainingBytes -= readSize;
-                    currentOffset += readSize;
-                }
-
-                Task.WaitAll(tasks.ToArray());
-
-                bytesRead = 0;
-                foreach (var task in tasks)
-                {
-                    var partBytesRead = task.Result;
-                    Buffer.BlockCopy(partBuffer, 0, buffer, bytesRead, partBytesRead);
-                    bytesRead += partBytesRead;
-                }
-
-                return DokanResult.Success;
-            //}
+            return DokanResult.Success;
         }
 
         public class S3FileWriteContext
@@ -158,42 +113,6 @@ namespace Layers3.Models
             public long FileSize { get; set; }
             public List<PartETag> PartETags { get; set; } = new List<PartETag>();
         }
-
-        //private static IEnumerable<string> GetOpenFilesForProcess(int processId)
-        //{
-        //    string query = $"SELECT * FROM CIM_ProcessExecutable WHERE Antecedent = \"Win32_Process.Handle='{processId}'\"";
-
-        //    using (var searcher = new ManagementObjectSearcher(query))
-        //    {
-        //        foreach (var item in searcher.Get())
-        //        {
-        //            string fileName = item["Dependent"].ToString().Split('"')[1];
-        //            yield return fileName;
-        //        }
-        //    }
-        //}
-
-        //private long GetFileSize(string fileName, int infoProcessId)
-        //{
-        //    var key = fileName.TrimStart(Path.DirectorySeparatorChar);
-        //    var files = GetOpenFilesForProcess(infoProcessId);
-        //    foreach (var file in files)
-        //    {
-        //        if (file.Contains(key))
-        //        {
-        //            return new FileInfo(file).Length;
-        //        }
-        //    }
-
-        //    return 0;
-        //}
-
-        ////static volatile bool isLastCallCompleted = false;
-        //private ConcurrentDictionary<string, bool> _isLastCallCompletedDic = new();
-        ////static ManualResetEvent waitHandle = new ManualResetEvent(false);
-        //static object lockObject = new object();
-        //private ConcurrentDictionary<string, bool> _signals = new();
-        //private SignalManager signalManager = new SignalManager();
 
         class A
         {
