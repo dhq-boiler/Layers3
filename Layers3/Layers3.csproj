@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
     <Platforms>AnyCPU</Platforms>
+    <ApplicationIcon>Resources\dhq_boiler_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

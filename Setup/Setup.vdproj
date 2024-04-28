@@ -13,6 +13,18 @@
 "SccProvider" = "8:"
     "Hierarchy"
     {
+        "Entry"
+        {
+        "MsmKey" = "8:_CB6A8B7869D2494482E6EE14F7AB83DC"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_DE262EBF134B40038D9A764358EEA0A3"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
     }
     "Configurations"
     {
@@ -102,6 +114,26 @@
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_CB6A8B7869D2494482E6EE14F7AB83DC"
+            {
+            "SourcePath" = "8:dhq_boiler_icon.ico"
+            "TargetName" = "8:dhq_boiler_icon.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_9F87A32BD3CD4ADB83CD853408EB62FF"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -170,7 +202,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Layers3"
         "ProductCode" = "8:{7E472779-BC2F-4EC5-B306-839385F359A9}"
-        "PackageCode" = "8:{E190110A-0C28-4144-9610-B7FAF4BF2AFA}"
+        "PackageCode" = "8:{23131A37-D841-481A-B186-6670787642A6}"
         "UpgradeCode" = "8:{840A420B-CA67-4D69-8D98-209EDA3CFF8B}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
@@ -354,7 +386,7 @@
         }
         "Shortcut"
         {
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_18C604874B9B4E219ACC9EEEB106D538"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_870EE9EE9D6F42839457B94503B10782"
             {
             "Name" = "8:Layers3"
             "Arguments" = "8:"
@@ -362,10 +394,10 @@
             "ShowCmd" = "3:1"
             "IconIndex" = "3:0"
             "Transitive" = "11:FALSE"
-            "Target" = "8:_A217151CFEA34A9DB4905FDC4948B436"
+            "Target" = "8:_DE262EBF134B40038D9A764358EEA0A3"
             "Folder" = "8:_10F6951D5C7B40B2A088C384EA9535CE"
             "WorkingFolder" = "8:_9F87A32BD3CD4ADB83CD853408EB62FF"
-            "Icon" = "8:"
+            "Icon" = "8:_CB6A8B7869D2494482E6EE14F7AB83DC"
             "Feature" = "8:"
             }
         }
@@ -767,7 +799,7 @@
         }
         "ProjectOutput"
         {
-            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_A217151CFEA34A9DB4905FDC4948B436"
+            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_DE262EBF134B40038D9A764358EEA0A3"
             {
             "SourcePath" = "8:..\\Layers3\\obj\\Release\\net8.0-windows10.0.22621.0\\apphost.exe"
             "TargetName" = "8:"
