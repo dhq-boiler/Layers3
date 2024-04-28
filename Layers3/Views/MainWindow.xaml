@@ -1,0 +1,73 @@
+﻿<Window
+    x:Class="Layers3.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:Layers3.Helpers"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:prism="http://prismlibrary.com/"
+    x:Name="window"
+    Title="Layers3"
+    Width="800"
+    Height="450"
+    prism:ViewModelLocator.AutoWireViewModel="True"
+    mc:Ignorable="d">
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Loaded">
+            <helpers:EventToCommand Command="{Binding LoadedCommand}" />
+        </i:EventTrigger>
+        <i:EventTrigger EventName="Closing">
+            <helpers:EventToCommand Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
+    <DockPanel x:Name="panel">
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="S3 バケット(_B)">
+                <MenuItem Command="{Binding RegisterNewCommand}" Header="登録..." />
+                <MenuItem Command="{Binding UnregisterCommand}" Header="登録解除" />
+            </MenuItem>
+        </Menu>
+        <ListView ItemsSource="{Binding Drives, UpdateSourceTrigger=PropertyChanged}">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="SelectionChanged">
+                    <helpers:EventToCommand Command="{Binding SelectedItemsCommand}" PassEventArgsToCommand="True" />
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Tag="{Binding ElementName=window}">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="{Binding MountCommand}" Header="マウント" />
+                                <MenuItem Command="{Binding UnmountCommand}" Header="マウント解除" />
+                                <MenuItem
+                                    Command="{Binding PlacementTarget.Tag.DataContext.ShowRecommendedPolicyCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                    CommandParameter="{Binding}"
+                                    Header="推奨されるポリシーを表示..." />
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
+                        <Rectangle
+                            Width="15"
+                            Height="15"
+                            Fill="{Binding IsRunningBrush.Value}"
+                            Stroke="Black"
+                            StrokeThickness="1" />
+                        <Label>
+                            <TextBlock>
+                                <Run Text="{Binding DriveLetter.Value}" />
+                                <Run>: ←</Run>
+                                <Run Text="{Binding BucketName.Value}" />
+                            </TextBlock>
+                        </Label>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </DockPanel>
+</Window>

@@ -1,0 +1,220 @@
+﻿<UserControl
+    x:Class="Layers3.Views.RegisterNew"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="clr-namespace:Layers3.Helpers"
+    xmlns:local="clr-namespace:Layers3.Views"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Bottom">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <StackPanel.Resources>
+                    <Style TargetType="Button">
+                        <Setter Property="Width" Value="75" />
+                        <Setter Property="Height" Value="25" />
+                        <Setter Property="Margin" Value="5" />
+                    </Style>
+                </StackPanel.Resources>
+                <Button Command="{Binding OKCommand}" Content="OK" />
+                <Button Command="{Binding CancelCommand}" Content="キャンセル" />
+            </StackPanel>
+            <DockPanel />
+        </DockPanel>
+        <StackPanel Orientation="Vertical">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0">APIキー：</Label>
+                <PasswordBox
+                    Grid.Column="1"
+                    helpers:PasswordBoxHelper.IsAttached="True"
+                    helpers:PasswordBoxHelper.Password="{Binding ApiKey.Value, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0">シークレット：</Label>
+                <PasswordBox
+                    Grid.Column="1"
+                    helpers:PasswordBoxHelper.IsAttached="True"
+                    helpers:PasswordBoxHelper.Password="{Binding Secret.Value, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0">リージョン：</Label>
+                <ComboBox
+                    Grid.Column="1"
+                    SelectedValue="{Binding RegionStr.Value, Mode=OneWayToSource}"
+                    SelectedValuePath="Tag">
+                    <ComboBoxItem Content="us-east-1 米国東部 (バージニア)" Tag="us-east-1" />
+                    <ComboBoxItem Content="us-east-2 米国東部（オハイオ）" Tag="us-east-2" />
+                    <ComboBoxItem Content="us-west-1 米国西部（北カリフォルニア）" Tag="us-west-1" />
+                    <ComboBoxItem Content="us-west-2 米国西部（オレゴン）" Tag="us-west-2" />
+                    <ComboBoxItem Content="af-south-1 アフリカ (ケープタウン)" Tag="af-south-1" />
+                    <ComboBoxItem Content="ap-east-1 アジアパシフィック (香港)" Tag="ap-east-1" />
+                    <ComboBoxItem Content="ap-south-2 アジアパシフィック (ハイデラバード) " Tag="ap-south-2" />
+                    <ComboBoxItem Content="ap-southeast-3 アジアパシフィック (ジャカルタ)" Tag="ap-southeast-3" />
+                    <ComboBoxItem Content="ap-southeast-4 アジアパシフィック (メルボルン)" Tag="ap-southeast-4" />
+                    <ComboBoxItem Content="ap-south-1 アジアパシフィック（ムンバイ）" Tag="ap-south-1" />
+                    <ComboBoxItem Content="ap-northeast-3 アジアパシフィック (大阪)" Tag="ap-northeast-3" />
+                    <ComboBoxItem Content="ap-northeast-2 アジアパシフィック（ソウル） " Tag="ap-northeast-2" />
+                    <ComboBoxItem Content="ap-southeast-1 アジアパシフィック（シンガポール）" Tag="ap-southeast-1" />
+                    <ComboBoxItem Content="ap-southeast-2 アジアパシフィック（シドニー）" Tag="ap-southeast-2" />
+                    <ComboBoxItem Content="ap-northeast-1 アジアパシフィック（東京）" Tag="ap-northeast-1" />
+                    <ComboBoxItem Content="ca-central-1 カナダ（中部）" Tag="ca-central-1" />
+                    <ComboBoxItem Content="ca-west-1 カナダ西部 (カルガリー)" Tag="ca-west-1" />
+                    <ComboBoxItem Content="eu-central-1 欧州 (フランクフルト)" Tag="eu-central-1" />
+                    <ComboBoxItem Content="eu-west-1 欧州 (アイルランド)" Tag="eu-west-1" />
+                    <ComboBoxItem Content="eu-west-2 欧州 (ロンドン)" Tag="eu-west-2" />
+                    <ComboBoxItem Content="eu-south-1 欧州 (ミラノ)" Tag="eu-south-1" />
+                    <ComboBoxItem Content="eu-west-3 欧州 (パリ)" Tag="eu-west-3" />
+                    <ComboBoxItem Content="eu-south-2 欧州 (スペイン)" Tag="eu-south-2" />
+                    <ComboBoxItem Content="eu-north-1 欧州 (ストックホルム)" Tag="eu-north-1" />
+                    <ComboBoxItem Content="eu-central-2 欧州 (チューリッヒ)" Tag="eu-central-2" />
+                    <ComboBoxItem Content="il-central-1 イスラエル (テルアビブ)" Tag="il-central-1" />
+                    <ComboBoxItem Content="me-south-1 中東 (バーレーン)" Tag="me-south-1" />
+                    <ComboBoxItem Content="me-central-1 中東 (アラブ首長国連邦)" Tag="me-central-1" />
+                    <ComboBoxItem Content="sa-east-1 南米（サンパウロ）" Tag="sa-east-1" />
+                </ComboBox>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0">バケット名：</Label>
+                <TextBox Grid.Column="1" Text="{Binding BucketName.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Grid.Resources>
+                    <Style TargetType="ToggleButton">
+                        <Setter Property="Width" Value="20" />
+                        <Setter Property="Margin" Value="2" />
+                    </Style>
+                </Grid.Resources>
+                <Label Grid.Column="0">マウントポイント：</Label>
+                <WrapPanel Grid.Column="1">
+                    <ToggleButton
+                        Content="A:"
+                        IsChecked="{Binding A.Value}"
+                        IsEnabled="{Binding CanUseA.Value}" />
+                    <ToggleButton
+                        Content="B:"
+                        IsChecked="{Binding B.Value}"
+                        IsEnabled="{Binding CanUseB.Value}" />
+                    <ToggleButton
+                        Content="C:"
+                        IsChecked="{Binding C.Value}"
+                        IsEnabled="{Binding CanUseC.Value}" />
+                    <ToggleButton
+                        Content="D:"
+                        IsChecked="{Binding D.Value}"
+                        IsEnabled="{Binding CanUseD.Value}" />
+                    <ToggleButton
+                        Content="E:"
+                        IsChecked="{Binding E.Value}"
+                        IsEnabled="{Binding CanUseE.Value}" />
+                    <ToggleButton
+                        Content="F:"
+                        IsChecked="{Binding F.Value}"
+                        IsEnabled="{Binding CanUseF.Value}" />
+                    <ToggleButton
+                        Content="G:"
+                        IsChecked="{Binding G.Value}"
+                        IsEnabled="{Binding CanUseG.Value}" />
+                    <ToggleButton
+                        Content="H:"
+                        IsChecked="{Binding H.Value}"
+                        IsEnabled="{Binding CanUseH.Value}" />
+                    <ToggleButton
+                        Content="I:"
+                        IsChecked="{Binding I.Value}"
+                        IsEnabled="{Binding CanUseI.Value}" />
+                    <ToggleButton
+                        Content="J:"
+                        IsChecked="{Binding J.Value}"
+                        IsEnabled="{Binding CanUseJ.Value}" />
+                    <ToggleButton
+                        Content="K:"
+                        IsChecked="{Binding K.Value}"
+                        IsEnabled="{Binding CanUseK.Value}" />
+                    <ToggleButton
+                        Content="L:"
+                        IsChecked="{Binding L.Value}"
+                        IsEnabled="{Binding CanUseL.Value}" />
+                    <ToggleButton
+                        Content="M:"
+                        IsChecked="{Binding M.Value}"
+                        IsEnabled="{Binding CanUseM.Value}" />
+                    <ToggleButton
+                        Content="N:"
+                        IsChecked="{Binding N.Value}"
+                        IsEnabled="{Binding CanUseN.Value}" />
+                    <ToggleButton
+                        Content="O:"
+                        IsChecked="{Binding O.Value}"
+                        IsEnabled="{Binding CanUseO.Value}" />
+                    <ToggleButton
+                        Content="P:"
+                        IsChecked="{Binding P.Value}"
+                        IsEnabled="{Binding CanUseP.Value}" />
+                    <ToggleButton
+                        Content="Q:"
+                        IsChecked="{Binding Q.Value}"
+                        IsEnabled="{Binding CanUseQ.Value}" />
+                    <ToggleButton
+                        Content="R:"
+                        IsChecked="{Binding R.Value}"
+                        IsEnabled="{Binding CanUseR.Value}" />
+                    <ToggleButton
+                        Content="S:"
+                        IsChecked="{Binding S.Value}"
+                        IsEnabled="{Binding CanUseS.Value}" />
+                    <ToggleButton
+                        Content="T:"
+                        IsChecked="{Binding T.Value}"
+                        IsEnabled="{Binding CanUseT.Value}" />
+                    <ToggleButton
+                        Content="U:"
+                        IsChecked="{Binding U.Value}"
+                        IsEnabled="{Binding CanUseU.Value}" />
+                    <ToggleButton
+                        Content="V:"
+                        IsChecked="{Binding V.Value}"
+                        IsEnabled="{Binding CanUseV.Value}" />
+                    <ToggleButton
+                        Content="W:"
+                        IsChecked="{Binding W.Value}"
+                        IsEnabled="{Binding CanUseW.Value}" />
+                    <ToggleButton
+                        Content="X:"
+                        IsChecked="{Binding X.Value}"
+                        IsEnabled="{Binding CanUseX.Value}" />
+                    <ToggleButton
+                        Content="Y:"
+                        IsChecked="{Binding Y.Value}"
+                        IsEnabled="{Binding CanUseY.Value}" />
+                    <ToggleButton
+                        Content="Z:"
+                        IsChecked="{Binding Z.Value}"
+                        IsEnabled="{Binding CanUseZ.Value}" />
+                </WrapPanel>
+            </Grid>
+        </StackPanel>
+    </DockPanel>
+</UserControl>
