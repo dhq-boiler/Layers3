@@ -30,23 +30,26 @@
                     <ColumnDefinition Width="100" />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
-                <Label Grid.Column="0">APIキー：</Label>
-                <PasswordBox
-                    Grid.Column="1"
-                    helpers:PasswordBoxHelper.IsAttached="True"
-                    helpers:PasswordBoxHelper.Password="{Binding ApiKey.Value, UpdateSourceTrigger=PropertyChanged}" />
+                <Label Grid.Column="0">バケット名：</Label>
+                <TextBox Grid.Column="1" Text="{Binding BucketName.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100" />
-                    <ColumnDefinition />
-                </Grid.ColumnDefinitions>
-                <Label Grid.Column="0">シークレット：</Label>
-                <PasswordBox
-                    Grid.Column="1"
-                    helpers:PasswordBoxHelper.IsAttached="True"
-                    helpers:PasswordBoxHelper.Password="{Binding Secret.Value, UpdateSourceTrigger=PropertyChanged}" />
-            </Grid>
+            <DockPanel DockPanel.Dock="Bottom">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <StackPanel.Resources>
+                        <Style TargetType="Button">
+                            <Setter Property="Width" Value="75" />
+                            <Setter Property="Height" Value="25" />
+                            <Setter Property="Margin" Value="5" />
+                        </Style>
+                    </StackPanel.Resources>
+                    <Button
+                        Width="Auto"
+                        Command="{Binding ShowRecommendedPolicyCommand}"
+                        Content="推奨されたポリシーを表示" />
+                </StackPanel>
+                <DockPanel />
+            </DockPanel>
+            <Grid Height="25" />
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="100" />
@@ -87,14 +90,6 @@
                     <ComboBoxItem Content="me-central-1 中東 (アラブ首長国連邦)" Tag="me-central-1" />
                     <ComboBoxItem Content="sa-east-1 南米（サンパウロ）" Tag="sa-east-1" />
                 </ComboBox>
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100" />
-                    <ColumnDefinition />
-                </Grid.ColumnDefinitions>
-                <Label Grid.Column="0">バケット名：</Label>
-                <TextBox Grid.Column="1" Text="{Binding BucketName.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -214,6 +209,28 @@
                         IsChecked="{Binding Z.Value}"
                         IsEnabled="{Binding CanUseZ.Value}" />
                 </WrapPanel>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0">APIキー：</Label>
+                <PasswordBox
+                    Grid.Column="1"
+                    helpers:PasswordBoxHelper.IsAttached="True"
+                    helpers:PasswordBoxHelper.Password="{Binding ApiKey.Value, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100" />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Label Grid.Column="0">シークレット：</Label>
+                <PasswordBox
+                    Grid.Column="1"
+                    helpers:PasswordBoxHelper.IsAttached="True"
+                    helpers:PasswordBoxHelper.Password="{Binding Secret.Value, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
         </StackPanel>
     </DockPanel>

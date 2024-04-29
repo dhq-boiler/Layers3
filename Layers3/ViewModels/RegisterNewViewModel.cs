@@ -1,13 +1,17 @@
 ﻿using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
+using Layers3.Models;
+using Layers3.Views;
 using Prism.Mvvm;
 using Prism.Services.Dialogs;
+using Prism.Unity;
 using Reactive.Bindings;
 using Reactive.Bindings.Extensions;
 using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Windows;
 using Windows.Security.Credentials;
 using DialogResult = Prism.Services.Dialogs.DialogResult;
 
@@ -74,6 +78,7 @@ namespace Layers3.ViewModels
         public ReactivePropertySlim<string> ApiKey { get; } = new();
         public ReactivePropertySlim<string> Secret { get; } = new();
 
+        public ReactiveCommandSlim ShowRecommendedPolicyCommand { get; }
         public ReactiveCommandSlim<object> OKCommand { get; }
         public ReactiveCommandSlim CancelCommand { get; }
 
@@ -402,6 +407,14 @@ namespace Layers3.ViewModels
             {
                 var result = new DialogResult(ButtonResult.Cancel);
                 RequestClose?.Invoke(result);
+            }).AddTo(_disposables);
+            ShowRecommendedPolicyCommand = BacketNameIsNotEmpty.ToReactiveCommandSlim().WithSubscribe(() =>
+            {
+                var dialogService =
+                    (App.Current as PrismApplication).Container.Resolve(typeof(IDialogService)) as IDialogService;
+                var dialogParameters = new DialogParameters();
+                dialogParameters.Add("bucketName", BucketName.Value);
+                dialogService.ShowDialog(nameof(ShowRecommendedPolicy), dialogParameters, result => { });
             }).AddTo(_disposables);
         }
 

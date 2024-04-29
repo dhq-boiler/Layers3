@@ -41,6 +41,7 @@ namespace Layers3.Models
 
         public Drive()
         {
+            Id.Value = Guid.NewGuid();
             IsRunningBrush = IsRunning.Select(v => (System.Windows.Media.Brush)(v ? System.Windows.Media.Brushes.Lime : System.Windows.Media.Brushes.Red))
                 .ToReadOnlyReactivePropertySlim();
             MountCommand = new ReactiveCommandSlim().WithSubscribe(Mount).AddTo(_disposables);
